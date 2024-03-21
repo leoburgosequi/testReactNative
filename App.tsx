@@ -1,118 +1,123 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import { Dimensions, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import RenderItem from './RenderItem';
+import styles from './styles';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+// const tasks = [
+//   {
+//     title: 'Despertar',
+//     done: false,
+//     date: new Date()
+//   },
+//   {
+//     title: 'Hace desayuno',
+//     done: true,
+//     date: new Date()
+//   },
+//   {
+//     title: 'Sacar la basura',
+//     done: true,
+//     date: new Date()
+//   },
+//   {
+//     title: 'Pasear al perro',
+//     done: false,
+//     date: new Date()
+//   },
+// ]
 
-type SectionProps = PropsWithChildren<{
+export interface Task {
   title: string;
-}>;
-
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
+  done: boolean;
+  date: Date;
 }
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+
+export default function App() {
+  const [text, setText] = useState<string>('');
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  const addTask = () => {
+    const tmp = [...tasks];
+    const newTask = {
+      title: text,
+      done: false,
+      date: new Date()
+    }
+    setText('');
+    tmp.push(newTask);
+    setTasks(tmp);
+    storeData(tmp);
+    // console.log("dsklhgbklds")
+
+  }
+
+  const markDone = (item: Task) => {
+    const tmp = [...tasks];
+    const index = tmp.findIndex(i => i.title === item.title);
+    const todo = tmp[index];
+    todo.done = !todo.done;
+    setTasks(tmp);
+    storeData(tmp);
+  }
+
+  const deleteFunction = (item: Task) => {
+    const tmp = [...tasks];
+    const index = tmp.findIndex(i => i.title === item.title);
+    tmp.splice(index, 1);
+    setTasks(tmp);
+    storeData(tmp);
+  }
+
+  const storeData = async (value: Task[]) => {
+    try {
+      const jsonValue = JSON.stringify(value);
+      await AsyncStorage.setItem('mytodo-tasks', jsonValue);
+    } catch (e) {
+      // saving error
+    }
+  };;
+
+  const getData = async () => {
+    try {
+      const value = await AsyncStorage.getItem('mytodo-tasks');
+      if (value !== null) {
+        const tasksLocal = JSON.parse(value);
+        setTasks(tasksLocal);
+      }
+    } catch (e) {
+      // error reading value
+    }
   };
 
+  useEffect(() => {
+    getData();
+  })
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+    <View style={styles.container} >
+      <Text style={styles.title}>Mis tareas por hacer</Text>
+      <View style={styles.inputContainer}>
+        <TextInput onChangeText={(t: string) => setText(t)} placeholder="Nueva tarea" style={styles.textInput} value={text} />
+        <TouchableOpacity style={styles.addButton}>
+          <Text onPress={addTask} style={styles.whiteText}>
+            Agregar
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.scrollContainer}>
+        <FlatList
+          renderItem={({ item }) => (
+            <RenderItem
+              item={item}
+              deleteFunction={deleteFunction}
+              markDone={markDone} />
+          )}
+          data={tasks}
+        />
+      </View>
+    </View>
+  )
 }
-
-const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-  },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
-  },
-});
-
-export default App;
